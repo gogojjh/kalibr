@@ -89,6 +89,7 @@ bool GridDetector::findTarget(const cv::Mat & image,
   return findTarget(image, aslam::Time(0, 0), outObservation);
 }
 
+// find calibration target corners 
 bool GridDetector::findTargetNoTransformation(const cv::Mat & image, const aslam::Time & stamp,
     GridCalibrationTargetObservation & outObservation) const {
   bool success = false;
@@ -122,6 +123,7 @@ bool GridDetector::findTarget(const cv::Mat & image, const aslam::Time & stamp,
   // calculate trafo cam-target
   if (success) {
     // also estimate the transformation:
+    // slam_cv/aslam_cameras/CameraGeometry.cpp
     success = _geometry->estimateTransformation(outObservation, trafo);
 
     if (success)

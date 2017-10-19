@@ -79,6 +79,7 @@ boost::python::tuple estimateTransformation(const C * camera, aslam::cameras::Gr
   return boost::python::make_tuple(success, trafo);
 }
 
+// camera intrinsics calibration -> fx fy cx cy distortion
 template<typename C>
 bool initializeIntrinsics(C* camera, const boost::python::object& py_obslist)
 {

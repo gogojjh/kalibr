@@ -156,9 +156,11 @@ class RsCalibrator(object):
             self.__config.framerate
         )
 
+        # solve problem 7
         # build estimator problem
         optimisation_problem = self.__buildOptimizationProblem(W)
 
+        """
         self.__runOptimization(
             optimisation_problem,
             self.__config.deltaJ,
@@ -193,6 +195,7 @@ class RsCalibrator(object):
                 )
 
         self.__printResults()
+        """
 
     def __generateExtrinsicsInitialGuess(self):
         """Estimate the pose of the camera with a PnP solver. Call after initializing the intrinsics"""
@@ -200,6 +203,7 @@ class RsCalibrator(object):
         for idx, observation in enumerate(self.__observations):
             (success, T_t_c) = self.__camera.estimateTransformation(observation)
             if (success):
+                print T_t_c
                 observation.set_T_t_c(T_t_c)
             else:
                 sm.logWarn("Could not estimate T_t_c for observation at index" . idx)
@@ -211,6 +215,7 @@ class RsCalibrator(object):
         Get an initial guess for the camera geometry (intrinsics, distortion). Distortion is typically left as 0,0,0,0.
         The parameters of the geometryModel are updated in place.
         """
+        # set the initial line deley d
         if (self.__isRollingShutter()):
             sensorRows = self.__observations[0].imRows()
             self.__camera.shutter().setParameters(np.array([1.0 / self.__config.framerate / float(sensorRows)]))

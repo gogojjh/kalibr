@@ -12,7 +12,7 @@ import kalibr_common as kc
 import kalibr_camera_calibration as kcc
 import kalibr_rs_camera_calibration as rscc
 
-import cv
+
 import cv2
 import os
 import numpy as np
@@ -144,8 +144,8 @@ def main():
     if parsed.verbose:
         sm.setLoggingLevel(sm.LoggingLevel.Debug)
     else:
-        sm.setLoggingLevel(sm.LoggingLevel.Info)
 
+        sm.setLoggingLevel(sm.LoggingLevel.Info)
     # register signal handler
     signal.signal(signal.SIGINT, __signal_exit)
 
@@ -154,20 +154,22 @@ def main():
     targetConfig = kc.CalibrationTargetParameters(parsed.targetYaml)
     dataset = __initBagDataset(parsed.bagfile, parsed.topic, parsed.bag_from_to)
 
+    #!!!
     #create camera
     cameraModel = cameraModels[parsed.model]
     cameraGeometry = kcc.CameraGeometry(cameraModel, targetConfig, dataset, verbose=(parsed.verbose or parsed.showextraction))
 
+    #!!!
     # extract observations
     observations = __extractObservations(cameraGeometry,(parsed.verbose or parsed.showextraction))
 
     # Calibration Configuration
     config = rscc.RsCalibratorConfiguration()
-    config.inverseFeatureCovariance = 1.0/parsed.inverseFeatureVariance
+    config.inverseFeatureCovariance = 1.0/parsed.inverseFeatureVariance # ??
     config.maxNumberOfIterations = parsed.max_iter
     config.framerate = parsed.framerate
-    config.timeOffsetConstantSparsityPattern = 0.08
-    config.timeOffsetPadding = 0.5
+    config.timeOffsetConstantSparsityPattern = 0.08 # ??
+    config.timeOffsetPadding = 0.5 # ??
 
     ######
     ## Calibrate

@@ -28,6 +28,7 @@ def multicoreExtractionWrapper(detector, taskq, resultq, clearImages, noTransfor
         if success:
             resultq.put( (obs, idx) )
 
+# detector: TargetExtractor.detector = acv.GridDetector
 def extractCornersFromDataset(dataset, detector, multithreading=False, numProcesses=None, clearImages=True, noTransformation=False):
     print "Extracting calibration target corners"    
     targetObservations = []
@@ -37,7 +38,7 @@ def extractCornersFromDataset(dataset, detector, multithreading=False, numProces
     iProgress = sm.Progress2(numImages)
     iProgress.sample()
             
-    if multithreading:   
+    if multithreading: 
         if not numProcesses:
             numProcesses = max(1,multiprocessing.cpu_count()-1)
         try:      
@@ -86,9 +87,10 @@ def extractCornersFromDataset(dataset, detector, multithreading=False, numProces
     else:
         for timestamp, image in dataset.readDataset():
             if noTransformation:
-                success, observation = detector.findTargetNoTransformation(timestamp, np.array(image))
+                success, observation = detector.findTargetNoTransformation(timestamp, np.array(image)) #
             else:
                 success, observation = detector.findTarget(timestamp, np.array(image))
+
             if clearImages:
                 observation.clearImage()
             if success == 1:
