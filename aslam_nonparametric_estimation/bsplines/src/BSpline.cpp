@@ -844,10 +844,10 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
       setCoefficientVector(c);
     }
 
-    
     void BSpline::initSplineSparseKnots(const Eigen::VectorXd &times, const Eigen::MatrixXd &interpolationPoints, const Eigen::VectorXd knots, double lambda)
     {
-        
+     
+      // times and interpolation points checking
     	SM_ASSERT_EQ(Exception,times.size(), interpolationPoints.cols(), "The number of times and the number of interpolation points must be equal");
     	SM_ASSERT_GE(Exception,times.size(),2, "There must be at least two times");
     	for(int i = 1; i < times.size(); i++)
@@ -856,11 +856,14 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
                          "The time sequence must be nondecreasing. time " << i
                          << " was not greater than or equal to time " << (i-1));
     	}
-        
-    	int K = knots.size();
+      // knot = seconds*framerate/3  
+      int K = knots.size();
+      
     	// How many coefficients are required for one time segment?
-    	int C = numCoefficientsRequired(knots.size() - 2*(splineOrder_ - 1)-1);
-    	// What is the vector coefficient dimension
+      int C = numCoefficientsRequired(knots.size() - 2*(splineOrder_ - 1)-1);
+      
+      // What is the vector coefficient dimension
+      // trajectories are described as transforamtion and rotation, so D = 6
     	int D = interpolationPoints.rows();
         
     	// Set the knots and zero the coefficients
@@ -904,7 +907,7 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
             
     		Eigen::MatrixXd & bi = *b.block(brow/D,0,allocateBlock );
     		bi = interpolationPoints.col(i);
-            
+
     		brow += D;
     	}
         
@@ -962,9 +965,10 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
     	setCoefficientVector(c);
     }
     
-
+    /* time of each frame, pose of each frame, number of knots, lambda */
     void BSpline::initSplineSparse(const Eigen::VectorXd & times, const Eigen::MatrixXd & interpolationPoints, int numSegments, double lambda)
     {
+        // times, interpolation points, numSegments checking
         SM_ASSERT_EQ(Exception,times.size(), interpolationPoints.cols(), "The number of times and the number of interpolation points must be equal");
         SM_ASSERT_GE(Exception,times.size(),2, "There must be at least two times");
         SM_ASSERT_GE(Exception,numSegments,1, "There must be at least one time segment");
@@ -974,29 +978,34 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
                          "The time sequence must be nondecreasing. time " << i
                          << " was not greater than or equal to time " << (i-1));
         }
-
         
         // How many knots are required for one time segment?
+        // K = numTimeSegments + 2*splineOrder_ - 1; ??? 
         int K = numKnotsRequired(numSegments);
+
         // How many coefficients are required for one time segment?
+        // C = numTimeSegments + splineOrder_ 
         int C = numCoefficientsRequired(numSegments);
+
         // What is the vector coefficient dimension
         int D = interpolationPoints.rows();
         
-        // Initialize a uniform knot sequence
+        // Initialize a uniform knot sequence (time)
         double dt = (times[times.size() - 1] - times[0]) / numSegments;
         std::vector<double> knots(K);
         for(int i = 0; i < K; i++)
         {
             knots[i] = times[0] + (i - splineOrder_ + 1) * dt;
         }
-        // Set the knots and zero the coefficients
+
+        // Set the knots and zero the coefficients (basis matrix)
         setKnotsAndCoefficients(knots, Eigen::MatrixXd::Zero(D,C));
         
         // define the structure:
         std::vector<int> rows;
         std::vector<int> cols;
         
+        // ???
         for (int i = 1; i <= interpolationPoints.cols(); i++)
             rows.push_back(i*D);
         for(int i = 1; i <= C; i++)
@@ -1011,7 +1020,8 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
         
         int brow = 0;
         // try to fill the matrix:
-        for(int i = 0; i < interpolationPoints.cols(); i++) {
+        for(int i = 0; i < interpolationPoints.cols(); i++) 
+        {
             Eigen::VectorXi coeffIndices = localCoefficientVectorIndices(times[i]);
 
             const bool allocateBlock = true;
@@ -1020,7 +1030,8 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
             Eigen::MatrixXd P = Phi(times[i],0); // Dx(n*D)
 
             // the n'th order spline needs n column blocks (n*D columns)
-            for(int j = 0; j < splineOrder_; j++) {
+            for(int j = 0; j < splineOrder_; j++) 
+            {
                 Eigen::MatrixXd & Ai = *A.block(brow/D,coeffIndices[0]/D+j,allocateBlock );
                 Ai= P.block(0,j*D,D,D);
             }

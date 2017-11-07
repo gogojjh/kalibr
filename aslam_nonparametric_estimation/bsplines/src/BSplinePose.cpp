@@ -33,9 +33,9 @@ namespace bsplines {
       Eigen::Matrix4d T = curveValueToTransformationAndJacobian( p, &JT );      
       
       if(J)
-	{
-	  *J = JT * JS;
-	}
+      {
+        *J = JT * JS;
+      }
 
       return T;
     }

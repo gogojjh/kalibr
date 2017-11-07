@@ -95,13 +95,14 @@ def extractCornersFromDataset(dataset, detector, multithreading=False, numProces
                 observation.clearImage()
             if success == 1:
                 targetObservations.append(observation)
+                
             iProgress.sample()
 
     if len(targetObservations) == 0:
         print "\r"
         sm.logFatal("No corners could be extracted for camera {0}! Check the calibration target configuration and dataset.".format(dataset.topic))
     else:    
-        print "\r  Extracted corners for %d images (of %d images)                              " % (len(targetObservations), numImages)
+        print "\r  Extracted corners for %d images (of %d images) " % (len(targetObservations), numImages)
 
     #close all opencv windows that might be open
     cv2.destroyAllWindows()

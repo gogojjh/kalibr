@@ -71,6 +71,7 @@ boost::python::tuple k2ehJk(const C * camera, Eigen::VectorXd const & k) {
   return boost::python::make_tuple(p, Jk, valid);
 }
 
+// ???
 template<typename C>
 boost::python::tuple estimateTransformation(const C * camera, aslam::cameras::GridCalibrationTargetObservation & obs)
 {

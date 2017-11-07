@@ -811,6 +811,7 @@ size_t PinholeProjection<DISTORTION_T>::computeReprojectionError(
   return count;
 }
 
+/// PnP solver from camera frame to the target frame
 /// \brief estimate the transformation of the camera with respect to the calibration target
 ///        On success out_T_t_c is filled in with the transformation that takes points from
 ///        the camera frame to the target frame

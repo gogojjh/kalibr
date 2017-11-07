@@ -159,8 +159,7 @@ def main():
     cameraModel = cameraModels[parsed.model]
     cameraGeometry = kcc.CameraGeometry(cameraModel, targetConfig, dataset, verbose=(parsed.verbose or parsed.showextraction))
 
-    #!!!
-    # extract observations(corner)
+    """ 1. extract chessboard paterns """
     observations = __extractObservations(cameraGeometry,(parsed.verbose or parsed.showextraction))
 
     # Calibration Configuration

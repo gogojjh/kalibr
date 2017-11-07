@@ -60,9 +60,11 @@ class RsCalibratorConfiguration(object):
     """Time offset to add to the beginning and end of the spline to ensure we remain
     in-bounds while estimating time-depending parameters that shift the spline.
     """
+    # ???
 
     numberOfKnots = None
     """Set to an integer to start with a fixed number of uniformly distributed knots on the spline."""
+    # None means that using adaptive knot number
 
     W = None
     """6x6 diagonal matrix with a weak motion prior"""
@@ -139,16 +141,20 @@ class RsCalibrator(object):
 
         self.__config.validate(self.__isRollingShutter())
 
-        # obtain initial guesses for extrinsics and intrinsics
+        """ 1. obtain initial guesses for extrinsics and intrinsics with GS method"""
+        """ 2. set the initial line deley d=1/(row of image*framereate) """
         if (not self.__generateIntrinsicsInitialGuess()):
             sm.logError("Could not generate initial guess.")
 
-        # obtain the extrinsic initial guess for every observation
+        """ 3. initialise a smoothing apline with GS PnP solution """
+        """ GS PnP solution: obtain the extrinsic initial guess for every observation """
         self.__generateExtrinsicsInitialGuess()
 
         # set the value for the motion prior term or uses the defaults
+        # the function of W ???
         W = self.__getMotionModelPriorOrDefault()
 
+        # a uniform knot sequence is distributed evenly
         self.__poseSpline = self.__generateInitialSpline(
             self.__config.splineOrder,
             self.__config.timeOffsetPadding,
@@ -156,8 +162,8 @@ class RsCalibrator(object):
             self.__config.framerate
         )
 
-        # solve problem 7
-        # build estimator problem
+        """ 4. solve problem 7 """
+        """ build estimator problem """
         optimisation_problem = self.__buildOptimizationProblem(W)
 
         """
@@ -198,12 +204,12 @@ class RsCalibrator(object):
         """
 
     def __generateExtrinsicsInitialGuess(self):
-        """Estimate the pose of the camera with a PnP solver. Call after initializing the intrinsics"""
-        # estimate and set T_c in the observations
+        """Estimate the pose of each camera frame(T_t_c) with a PnP solver. Call after initializing the intrinsics"""
+        """PnP solver: solve cv::solvePnP(target.points, camera_points, cv::Mat::eye(3, 3, CV_64F), distCoeffs, rvec, tvec); """
         for idx, observation in enumerate(self.__observations):
             (success, T_t_c) = self.__camera.estimateTransformation(observation)
             if (success):
-                print T_t_c
+                print T_t_c 
                 observation.set_T_t_c(T_t_c)
             else:
                 sm.logWarn("Could not estimate T_t_c for observation at index" . idx)
@@ -215,7 +221,7 @@ class RsCalibrator(object):
         Get an initial guess for the camera geometry (intrinsics, distortion). Distortion is typically left as 0,0,0,0.
         The parameters of the geometryModel are updated in place.
         """
-        # set the initial line deley d
+        """ initialize a line delay: d"""
         if (self.__isRollingShutter()):
             sensorRows = self.__observations[0].imRows()
             self.__camera.shutter().setParameters(np.array([1.0 / self.__config.framerate / float(sensorRows)]))
@@ -224,7 +230,8 @@ class RsCalibrator(object):
 
     def __getMotionModelPriorOrDefault(self):
         """Get the motion model prior or the default value"""
-        W = self.__config.W
+        """default: W is None"""
+        W = self.__config.W 
         if W is None:
             W = np.eye(6)
             W[:3,:3] *= 1e-3
@@ -233,31 +240,38 @@ class RsCalibrator(object):
         return W
 
     def __generateInitialSpline(self, splineOrder, timeOffsetPadding, numberOfKnots = None, framerate = None):
+        """a class defined in aslam_nonparametric/bsplines/src/BSplinePose.cpp"""
         poseSpline = bsplines.BSplinePose(splineOrder, sm.RotationVector())
 
-        # Get the observation times.
+        # Get the observation times of each frame
         times = np.array([observation.time().toSec() for observation in self.__observations ])
+
         # get the pose values of the initial transformations at observation time
         curve = np.matrix([ poseSpline.transformationToCurveValue( observation.T_t_c().T() ) for observation in self.__observations]).T
+        
         # make sure all values are well defined
         if np.isnan(curve).any():
             raise RuntimeError("Nans in curve values")
             sys.exit(0)
+
         # Add 2 seconds on either end to allow the spline to slide during optimization
-        times = np.hstack((times[0] - (timeOffsetPadding * 2.0), times, times[-1] + (timeOffsetPadding * 2.0)))
-        curve = np.hstack((curve[:,0], curve, curve[:,-1]))
+        # ???
+        times = np.hstack( (times[0] - (timeOffsetPadding * 2.0), times, times[-1] + (timeOffsetPadding * 2.0)) )
+        curve = np.hstack( (curve[:,0], curve, curve[:,-1]) )
 
         self.__ensureContinuousRotationVectors(curve)
 
         seconds = times[-1] - times[0]
 
         # fixed number of knots
+        # default: numberOfKnots is None
         if (numberOfKnots is not None):
             knots = numberOfKnots
         # otherwise with framerate estimate
         else:
             knots = int(round(seconds * framerate/3))
 
+        # The spline should have a uniform knot sequence
         print
         print "Initializing a pose spline with %d knots (%f knots per second over %f seconds)" % ( knots, 100, seconds)
         poseSpline.initPoseSplineSparse(times, curve, knots, 1e-4)
@@ -386,6 +400,7 @@ class RsCalibrator(object):
                 camera_dv
             )
 
+    # ???
     def __ensureContinuousRotationVectors(self, curve):
         """
         Ensures that the rotation vector does not flip and enables a continuous trajectory modeling.
