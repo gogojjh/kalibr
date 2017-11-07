@@ -411,6 +411,7 @@ namespace bsplines {
 
     }
 
+    // vectorize
     Eigen::VectorXd BSplinePose::transformationToCurveValue( const Eigen::Matrix4d & T ) const
     {
       Eigen::VectorXd c(6);

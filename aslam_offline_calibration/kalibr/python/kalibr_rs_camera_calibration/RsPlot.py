@@ -2,6 +2,9 @@ import sm
 import numpy as np
 import pylab as pl
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 def plotSpline(spline, splineB = None):
     """Plots a spline over the full range of times.
 
@@ -36,18 +39,18 @@ def plotSpline(spline, splineB = None):
     ori = np.array(ori)
 
     pl.figure()
-    pl.subplot(311)
+    pl.subplot(411)
     pl.title('Position')
-    pl.plot(times, (pos[:,0]))
+    pl.plot(times, (pos[:, 0]))
     if (splineB is not None):
         pl.plot(times, (posB[:,0]))
 
-    pl.subplot(312)
+    pl.subplot(412)
     pl.plot(times, (pos[:,1]))
     if (splineB is not None):
         pl.plot(times, (posB[:,1]))
 
-    pl.subplot(313)
+    pl.subplot(413)
     pl.plot(times, (pos[:,2]))
     if (splineB is not None):
         pl.plot(times, (posB[:,2]))
@@ -69,8 +72,10 @@ def plotSpline(spline, splineB = None):
     if (splineB is not None):
         pl.plot(times, (oriB[:,2]))
 
+    fig = pl.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(pos[:, 0], pos[:, 1], pos[:, 2])
     pl.show()
-
 
 
 def plotSplineValues(spline, splineB = None):

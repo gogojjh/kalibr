@@ -17,6 +17,10 @@ from RsPlot import plotSplineValues
 import pylab as pl
 import pdb
 
+import matplotlib.pyplot as plt
+import matplotlib.axes as axes
+from mpl_toolkits.mplot3d import Axes3D
+
 # make numpy print prettier
 np.set_printoptions(suppress=True)
 
@@ -162,11 +166,13 @@ class RsCalibrator(object):
             self.__config.framerate
         )
 
+        # draw the spline
+        plotSpline(self.__poseSpline)
+
         """ 4. solve problem 7 """
         """ build estimator problem """
         optimisation_problem = self.__buildOptimizationProblem(W)
 
-        """
         self.__runOptimization(
             optimisation_problem,
             self.__config.deltaJ,
@@ -201,15 +207,13 @@ class RsCalibrator(object):
                 )
 
         self.__printResults()
-        """
-
+        
     def __generateExtrinsicsInitialGuess(self):
         """Estimate the pose of each camera frame(T_t_c) with a PnP solver. Call after initializing the intrinsics"""
         """PnP solver: solve cv::solvePnP(target.points, camera_points, cv::Mat::eye(3, 3, CV_64F), distCoeffs, rvec, tvec); """
         for idx, observation in enumerate(self.__observations):
             (success, T_t_c) = self.__camera.estimateTransformation(observation)
             if (success):
-                print T_t_c 
                 observation.set_T_t_c(T_t_c)
             else:
                 sm.logWarn("Could not estimate T_t_c for observation at index" . idx)
@@ -231,6 +235,14 @@ class RsCalibrator(object):
     def __getMotionModelPriorOrDefault(self):
         """Get the motion model prior or the default value"""
         """default: W is None"""
+        """
+        [1e-5 0 0 0 0 0]
+        [0 1e-5 0 0 0 0]
+        [0 0 1e-5 0 0 0]
+        [0 0 0 1e-2 0 0]
+        [0 0 0 0 1e-2 0]
+        [0 0 0 0 0 1e-2]
+        """
         W = self.__config.W 
         if W is None:
             W = np.eye(6)
@@ -255,12 +267,14 @@ class RsCalibrator(object):
             sys.exit(0)
 
         # Add 2 seconds on either end to allow the spline to slide during optimization
-        # ???
+        # np.stack(): Stack arrays in sequence horizontally
+        print "times[0]: %f times[-1]: %f" % (times[0], times[01])
         times = np.hstack( (times[0] - (timeOffsetPadding * 2.0), times, times[-1] + (timeOffsetPadding * 2.0)) )
         curve = np.hstack( (curve[:,0], curve, curve[:,-1]) )
 
         self.__ensureContinuousRotationVectors(curve)
 
+        # Time interval of the whole process
         seconds = times[-1] - times[0]
 
         # fixed number of knots
@@ -400,7 +414,6 @@ class RsCalibrator(object):
                 camera_dv
             )
 
-    # ???
     def __ensureContinuousRotationVectors(self, curve):
         """
         Ensures that the rotation vector does not flip and enables a continuous trajectory modeling.
@@ -414,8 +427,8 @@ class RsCalibrator(object):
             best_r = r
             best_dist = np.linalg.norm( best_r - previousRotationVector)
 
-            for s in range(-3,4):
-                aa = axis * (angle + math.pi * 2.0 * s)
+            for s in range(-3,4): 
+                aa = axis * (angle + math.pi * 2.0 * s) # angle+2*kj*pi generating a plausible range of rotation
                 dist = np.linalg.norm( aa - previousRotationVector )
                 if dist < best_dist:
                     best_r = aa

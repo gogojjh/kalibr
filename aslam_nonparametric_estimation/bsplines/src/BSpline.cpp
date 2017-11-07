@@ -36,7 +36,7 @@ namespace bsplines {
     void BSpline::setKnotsAndCoefficients(const std::vector<double> & knots, const Eigen::MatrixXd & coefficients)
     {
       //std::cout << "setting " << knots.size() << " knots\n";
-      // This will throw an exception if it is an invalid knot sequence.
+      // This will throw an exception if it is an invalid knot sequence. more than 1 order
       verifyKnotSequence(knots);
 
       // Check if the number of coefficients matches the number of knots.
@@ -60,64 +60,65 @@ namespace bsplines {
       basisMatrices_.resize(numValidTimeSegments());
 
       for(unsigned i = 0; i < basisMatrices_.size(); i++)
-	{
-	  basisMatrices_[i] = M(splineOrder_,i + splineOrder_ - 1);
-//	  std::cout << "M[" << i << "]:\n" << basisMatrices_[i] << std::endl;
-	}
+	    {
+	      basisMatrices_[i] = M(splineOrder_,i + splineOrder_ - 1);
+        //	  std::cout << "M[" << i << "]:\n" << basisMatrices_[i] << std::endl;
+	    }
     }
 
-
+    // ??? recursive calculation for b-spline polynomial
+    // k=splineorder, i=splineorder+i-1
     Eigen::MatrixXd BSpline::M(int k, int i)
     {
       SM_ASSERT_GE_DBG(Exception, k, 1, "The parameter k must be greater than or equal to 1");
       SM_ASSERT_GE_DBG(Exception, i, 0, "The parameter i must be greater than or equal to 0");
       SM_ASSERT_LT_DBG(Exception, i, (int)knots_.size(), "The parameter i must be less than the number of time segments");
       if(k == 1)
-	{
-	  // The base-case for recursion.
-	  Eigen::MatrixXd M(1,1);
-	  M(0,0) = 1;
-	  return M;
-	}
+	    {
+	      // The base-case for recursion.
+	      Eigen::MatrixXd M(1,1);
+        M(0,0) = 1;
+        return M;
+      }
       else
-	{
-	  Eigen::MatrixXd M_km1 = M(k-1,i);
-	  // The recursive equation for M
-	  // M_k = [ M_km1 ] A  + [  0^T  ] B
-	  //       [  0^T  ]      [ M_km1 ]
-	  //        -------        -------
-	  //         =: M1          =: M2
-	  //
-	  //     = M1 A + M2 B
-	  Eigen::MatrixXd M1 = Eigen::MatrixXd::Zero(M_km1.rows() + 1, M_km1.cols());
-	  Eigen::MatrixXd M2 = Eigen::MatrixXd::Zero(M_km1.rows() + 1, M_km1.cols());
+    	{
+        // ???
+        Eigen::MatrixXd M_km1 = M(k-1,i);
+        // The recursive equation for M
+        // M_k = [ M_km1 ] A  + [  0^T  ] B
+        //       [  0^T  ]      [ M_km1 ]
+        //        -------        -------
+        //         =: M1          =: M2
+        //
+        //     = M1 A + M2 B
+        Eigen::MatrixXd M1 = Eigen::MatrixXd::Zero(M_km1.rows() + 1, M_km1.cols());
+        Eigen::MatrixXd M2 = Eigen::MatrixXd::Zero(M_km1.rows() + 1, M_km1.cols());
 
-	  M1.topRightCorner(M_km1.rows(),M_km1.cols()) = M_km1;
-	  M2.bottomRightCorner(M_km1.rows(),M_km1.cols()) = M_km1;
+        M1.topRightCorner(M_km1.rows(),M_km1.cols()) = M_km1;
+        M2.bottomRightCorner(M_km1.rows(),M_km1.cols()) = M_km1;
 
-	  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(k-1, k);
-	  for(int idx = 0; idx < A.rows(); idx++)
-	    {
-	      int j = i - k + 2 + idx;
-	      double d0 = d_0(k, i, j);
-	      A(idx, idx  ) = 1.0 - d0;
-	      A(idx, idx+1) = d0;
-	    }
+        Eigen::MatrixXd A = Eigen::MatrixXd::Zero(k-1, k);
+        for(int idx = 0; idx < A.rows(); idx++)
+        {
+          int j = i - k + 2 + idx;
+          double d0 = d_0(k, i, j);
+          A(idx, idx  ) = 1.0 - d0;
+          A(idx, idx+1) = d0;
+        }
 
-	  Eigen::MatrixXd B = Eigen::MatrixXd::Zero(k-1, k);
-	  for(int idx = 0; idx < B.rows(); idx++)
-	    {
-	      int j = i - k + 2 + idx;
-	      double d1 = d_1(k, i, j);
-	      B(idx, idx  ) = -d1;
-	      B(idx, idx+1) = d1;
-	    }
-	  
-	  
-	  Eigen::MatrixXd M_k;
+        Eigen::MatrixXd B = Eigen::MatrixXd::Zero(k-1, k);
+        for(int idx = 0; idx < B.rows(); idx++)
+        {
+          int j = i - k + 2 + idx;
+          double d1 = d_1(k, i, j);
+          B(idx, idx  ) = -d1;
+          B(idx, idx+1) = d1;
+        }
+      
+        Eigen::MatrixXd M_k;
 
-	  return M_k = M1 * A + M2 * B;
-	}
+        return M_k = M1 * A + M2 * B;
+      }
     }
 
     double BSpline::d_0(int k, int i, int j)
@@ -127,7 +128,7 @@ namespace bsplines {
       SM_ASSERT_GE_LT_DBG(Exception,i,0,(int)knots_.size(), "Index out of range with k=" << k << ", i=" << i << ", and j=" << j);
       double denom = knots_[j+k-1] - knots_[j];
       if(denom <= 0.0)
-	return 0.0;
+	      return 0.0;
 
       double numerator = knots_[i] - knots_[j];
 
@@ -504,9 +505,9 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
     {
       SM_ASSERT_EQ(Exception,c.size(),coefficients_.rows() * coefficients_.cols(), "The coefficient vector is the wrong size. The vector must contain all vector-valued coefficients stacked up into one column.");
       for(int i = 0; i < coefficients_.cols(); i++)
-	{
-	  coefficients_.col(i) = c.segment(i * coefficients_.rows(),coefficients_.rows());
-	}      
+      {
+        coefficients_.col(i) = c.segment(i * coefficients_.rows(),coefficients_.rows());
+      }      
     }
 
     Eigen::VectorXd BSpline::coefficientVector()
@@ -885,8 +886,8 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
         
     	std::vector<int> bcols(1);
     	bcols[0] = 1;
-        
-    	sparse_block_matrix::SparseBlockMatrix<Eigen::MatrixXd> A(rows,cols, true);
+
+      sparse_block_matrix::SparseBlockMatrix<Eigen::MatrixXd> A(rows,cols, true);
     	sparse_block_matrix::SparseBlockMatrix<Eigen::MatrixXd> b(rows,bcols, true);
         
     	int brow = 0;
@@ -979,18 +980,16 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
                          << " was not greater than or equal to time " << (i-1));
         }
         
-        // How many knots are required for one time segment?
-        // K = numTimeSegments + 2*splineOrder_ - 1; ??? 
-        int K = numKnotsRequired(numSegments);
+        // K = C + splineOrder_ - 1; knot number
+        int K = numKnotsRequired(nummSegments);
 
-        // How many coefficients are required for one time segment?
-        // C = numTimeSegments + splineOrder_ 
+        // C = numTimeSegments + splineOrder_; coefficinent(control points) number
         int C = numCoefficientsRequired(numSegments);
 
-        // What is the vector coefficient dimension
+        // D = 6
         int D = interpolationPoints.rows();
         
-        // Initialize a uniform knot sequence (time)
+        // uniform knot time ??? a bug ???
         double dt = (times[times.size() - 1] - times[0]) / numSegments;
         std::vector<double> knots(K);
         for(int i = 0; i < K; i++)
@@ -1005,13 +1004,13 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
         std::vector<int> rows;
         std::vector<int> cols;
         
-        // ???
         for (int i = 1; i <= interpolationPoints.cols(); i++)
             rows.push_back(i*D);
         for(int i = 1; i <= C; i++)
             cols.push_back(i*D);
- 
-        
+
+        // FIXME:
+        // ??? define the coefficient
         std::vector<int> bcols(1);
         bcols[0] = 1;
         
