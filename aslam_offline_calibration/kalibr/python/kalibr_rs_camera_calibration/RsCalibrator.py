@@ -166,9 +166,6 @@ class RsCalibrator(object):
             self.__config.framerate
         )
 
-        # draw the spline
-        plotSpline(self.__poseSpline)
-
         """ 4. solve problem 7 """
         """ build estimator problem """
         optimisation_problem = self.__buildOptimizationProblem(W)
@@ -205,8 +202,12 @@ class RsCalibrator(object):
                     self.__config.deltaX,
                     self.__config.maxNumberOfIterations
                 )
+                
+                # draw the spline
+                plotSpline(self.__poseSpline)
 
         self.__printResults()
+
         
     def __generateExtrinsicsInitialGuess(self):
         """Estimate the pose of each camera frame(T_t_c) with a PnP solver. Call after initializing the intrinsics"""

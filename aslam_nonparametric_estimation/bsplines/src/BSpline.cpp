@@ -33,10 +33,11 @@ namespace bsplines {
       return splineOrder_ - 1;
     }
 
+    // knot sequence, coefficients
     void BSpline::setKnotsAndCoefficients(const std::vector<double> & knots, const Eigen::MatrixXd & coefficients)
     {
       //std::cout << "setting " << knots.size() << " knots\n";
-      // This will throw an exception if it is an invalid knot sequence. more than 1 order
+      // This will throw an exception if it is an invalid knot sequence. more than 1 orde if it is an invalid knot sequence. more than 1 order
       verifyKnotSequence(knots);
 
       // Check if the number of coefficients matches the number of knots.
@@ -57,10 +58,11 @@ namespace bsplines {
 
     void BSpline::initializeBasisMatrices()
     {
-      basisMatrices_.resize(numValidTimeSegments());
+      basisMatrices_.resize(numValidTimeSegments()); // knots.size()
 
       for(unsigned i = 0; i < basisMatrices_.size(); i++)
 	    {
+        // TODO: to check the dimension of basisMatrices_
 	      basisMatrices_[i] = M(splineOrder_,i + splineOrder_ - 1);
         //	  std::cout << "M[" << i << "]:\n" << basisMatrices_[i] << std::endl;
 	    }
@@ -189,11 +191,11 @@ namespace bsplines {
 		     << " knots are required");
       
       for(unsigned i = 1; i < knots_.size(); i++)
-	{
-	  SM_ASSERT_LE(Exception, knots[i-1], knots[i],
-			 "The knot sequence must be nondecreasing. Knot " << i
-			 << " was not greater than or equal to knot " << (i-1));
-	}
+      {
+        SM_ASSERT_LE(Exception, knots[i-1], knots[i],
+          "The knot sequence must be nondecreasing. Knot " << i
+          << " was not greater than or equal to knot " << (i-1));
+      }
     }
     
     int BSpline::numValidTimeSegments(int numKnots) const
@@ -433,7 +435,7 @@ Eigen::VectorXd BSpline::segmentCoefficientVector(int segmentIdx) const {
   return c;
 }
 
-
+    // ???
     Eigen::VectorXi BSpline::localCoefficientVectorIndices(double t) const
     {
       std::pair<double,int> ui = computeTIndex(t);
@@ -514,9 +516,9 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
     {
       Eigen::VectorXd c(coefficients_.rows() * coefficients_.cols());
       for(int i = 0; i < coefficients_.cols(); i++)
-	{
-	  c.segment(i * coefficients_.rows(),coefficients_.rows()) = coefficients_.col(i);
-	}
+      {
+        c.segment(i * coefficients_.rows(),coefficients_.rows()) = coefficients_.col(i);
+      }
       return c;
     }
 
@@ -786,9 +788,10 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
       double dt = (times[times.size() - 1] - times[0]) / numSegments;
       std::vector<double> knots(K);
       for(int i = 0; i < K; i++)
-	{
-	  knots[i] = times[0] + (i - splineOrder_ + 1) * dt;
-	}
+      {
+        knots[i] = times[0] + (i - splineOrder_ + 1) * dt;
+      }
+
       // Set the knots and zero the coefficients
       setKnotsAndCoefficients(knots, Eigen::MatrixXd::Zero(D,C));
 
@@ -975,13 +978,11 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
         SM_ASSERT_GE(Exception,numSegments,1, "There must be at least one time segment");
         for(int i = 1; i < times.size(); i++)
         {
-            SM_ASSERT_LE(Exception, times[i-1], times[i],
-                         "The time sequence must be nondecreasing. time " << i
-                         << " was not greater than or equal to time " << (i-1));
+            SM_ASSERT_LE(Exception, times[i-1], times[i],"The time sequence must be nondecreasing. time " << i << " was not greater than or equal to time " << (i-1));
         }
         
-        // K = C + splineOrder_ - 1; knot number
-        int K = numKnotsRequired(nummSegments);
+        // K = C + splineOrder_; knot number
+        int K = numKnotsRequired(numSegments);
 
         // C = numTimeSegments + splineOrder_; coefficinent(control points) number
         int C = numCoefficientsRequired(numSegments);
@@ -996,6 +997,8 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
         {
             knots[i] = times[0] + (i - splineOrder_ + 1) * dt;
         }
+
+        std::cout << "Time Seg:" << numSegments << " K:" << K << " C:" << C << " D:" << D << " knots.size():" << knots.size() << std::endl;
 
         // Set the knots and zero the coefficients (basis matrix)
         setKnotsAndCoefficients(knots, Eigen::MatrixXd::Zero(D,C));
@@ -1017,6 +1020,7 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
         sparse_block_matrix::SparseBlockMatrix<Eigen::MatrixXd> A(rows,cols, true);
         sparse_block_matrix::SparseBlockMatrix<Eigen::MatrixXd> b(rows,bcols, true);
         
+        // TODO: how to interpolate with N known frames
         int brow = 0;
         // try to fill the matrix:
         for(int i = 0; i < interpolationPoints.cols(); i++) 
@@ -1483,9 +1487,9 @@ Eigen::VectorXi BSpline::segmentVvCoefficientVectorIndices(int segmentIdx) const
       Eigen::MatrixXd subD = Dii(segmentIndex);
 
       for(int d = 0; d < D; d++)
-	{
-	  fullD.block(d*splineOrder_,d*splineOrder_,splineOrder_,splineOrder_) = subD;
-	}
+      {
+        fullD.block(d*splineOrder_,d*splineOrder_,splineOrder_,splineOrder_) = subD;
+      }
 
       return fullD;
     }
@@ -1707,9 +1711,9 @@ Eigen::MatrixXd BSpline::segmentIntegral(int segmentIdx, const Eigen::MatrixXd &
 
       int QiSize = splineOrder_ * D; 
       for(int s = 0; s < numValidTimeSegments(); s++)
-	{
-	  Q.block(s*D,s*D,QiSize,QiSize) += segmentQuadraticIntegralDiag(Wdiag, s, derivativeOrder);
-	}
+      {
+        Q.block(s*D,s*D,QiSize,QiSize) += segmentQuadraticIntegralDiag(Wdiag, s, derivativeOrder);
+      }
       
 
       return Q;
