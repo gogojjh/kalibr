@@ -155,7 +155,7 @@ class RsCalibrator(object):
         self.__generateExtrinsicsInitialGuess()
 
         # set the value for the motion prior term or uses the defaults
-        # the function of W ???
+        # a prior of the accleration - effective when no information on the pose is available
         W = self.__getMotionModelPriorOrDefault()
 
         # a uniform knot sequence is distributed evenly
@@ -269,7 +269,7 @@ class RsCalibrator(object):
 
         # Add 2 seconds on either end to allow the spline to slide during optimization
         # np.stack(): Stack arrays in sequence horizontally
-        print "times[0]: %f times[-1]: %f" % (times[0], times[01])
+        print "times[0]: %f times[-1]: %f" % (times[0], times[-1])
         times = np.hstack( (times[0] - (timeOffsetPadding * 2.0), times, times[-1] + (timeOffsetPadding * 2.0)) )
         curve = np.hstack( (curve[:,0], curve, curve[:,-1]) )
 
@@ -297,7 +297,7 @@ class RsCalibrator(object):
         """Build the optimisation problem"""
         problem = inc.CalibrationOptimizationProblem()
 
-        # Initialize all design variables.
+        # 1. Initialize all design variables.
         self.__initPoseDesignVariables(problem)
 
         #####
@@ -311,7 +311,7 @@ class RsCalibrator(object):
         # is invariant across all observations. At least for the chessboards it is true.
 
         #####
-        # add all the landmarks once
+        # 2. add all the landmarks once
         landmarks = []
         landmarks_expr = []
         for landmark in self.__observations[0].getCornersTargetFrame():
@@ -323,7 +323,7 @@ class RsCalibrator(object):
             problem.addDesignVariable(landmark_w_dv, CALIBRATION_GROUP_ID)
 
         #####
-        # activate design variables
+        # 3. activate design variables
         self.__camera_dv.setActive(
             self.__config.estimateParameters['intrinsics'],
             self.__config.estimateParameters['distortion'],
@@ -332,19 +332,18 @@ class RsCalibrator(object):
 
         #####
         # Add design variables
-
         # add the camera design variables last for optimal sparsity patterns
         problem.addDesignVariable(self.__camera_dv.shutterDesignVariable(), CALIBRATION_GROUP_ID)
         problem.addDesignVariable(self.__camera_dv.projectionDesignVariable(), CALIBRATION_GROUP_ID)
         problem.addDesignVariable(self.__camera_dv.distortionDesignVariable(), CALIBRATION_GROUP_ID)
 
         #####
-        # Regularization term / motion prior
+        # 4. Regularization term / motion prior
         motionError = asp.BSplineMotionError(self.__poseSpline_dv, W)
         problem.addErrorTerm(motionError)
 
         #####
-        # add a reprojection error for every corner of each observation
+        # 5. add a reprojection error for every corner of each observation
         for observation in self.__observations:
             # only process successful observations of a pattern
             if (observation.hasSuccessfulObservation()):
@@ -452,25 +451,25 @@ class RsCalibrator(object):
         print "run new optimisation with initial values:"
         self.__printResults()
 
-        # verbose and choldmod solving with schur complement trick
+        # 1. verbose and choldmod solving with schur complement trick
         options = aopt.Optimizer2Options()
         options.verbose = True
         options.linearSolver = aopt.BlockCholeskyLinearSystemSolver()
         options.doSchurComplement = True
 
-        # stopping criteria
+        # 2. stopping criteria
         options.maxIterations = maxIt
         options.convergenceDeltaJ = deltaJ
         options.convergenceDeltaX = deltaX
 
-        # use the dogleg trustregion policy
+        # 3. use the dogleg trustregion policy
         options.trustRegionPolicy = aopt.DogLegTrustRegionPolicy()
 
-        # create the optimizer
+        # 4. create the optimizer
         optimizer = aopt.Optimizer2(options)
         optimizer.setProblem(problem)
 
-        # go for it:
+        # 5. go for it:
         return optimizer.optimize()
 
     def __isRollingShutter(self):
